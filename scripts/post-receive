@@ -1,0 +1,99 @@
+#!/bin/sh
+# ForgePulse post-receive hook — signed pushes + commit details.
+#
+# Install:
+#   cp scripts/post-receive .git/hooks/post-receive
+#   chmod +x .git/hooks/post-receive
+#   cd scripts && npm install
+#
+# Configure:
+#   export FORGEPULSE_URL="http://localhost:8080/hook"
+#   export HOOK_TOKEN="your-secret"
+#   export FORGEPULSE_BIN="/path/to/server/scripts"
+
+FORGEPULSE_URL="${FORGEPULSE_URL:-http://localhost:8080/hook}"
+FORGEPULSE_BIN="${FORGEPULSE_BIN:-$(dirname "$0")}"
+REPO_PATH="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+PUSHER="${GIT_PUSH_USER:-${USER:-unknown}}"
+
+build_commits_json() {
+  old_sha="$1"
+  new_sha="$2"
+  json="["
+  first=1
+  range="$old_sha..$new_sha"
+  if echo "$old_sha" | grep -q '^0000000'; then
+    range="$new_sha"
+  fi
+  while IFS='|' read -r sha msg; do
+    [ -z "$sha" ] && continue
+    short="${sha%"${sha#???????}"}"
+    msg=$(printf '%s' "$msg" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')
+    if [ "$first" -eq 0 ]; then
+      json="$json,"
+    fi
+    first=0
+    json="$json{\"sha\":\"$short\",\"message\":\"$msg\"}"
+  done <<EOF
+$(git log --format='%H|%s' -n 30 "$range" 2>/dev/null)
+EOF
+  json="$json]"
+  printf '%s' "$json"
+}
+
+sign_push() {
+  repo="$1"
+  ref="$2"
+  old_sha="$3"
+  new_sha="$4"
+  if [ -f "$FORGEPULSE_BIN/sign-push.mjs" ]; then
+    node "$FORGEPULSE_BIN/sign-push.mjs" "$repo" "$ref" "$old_sha" "$new_sha" 2>/dev/null || echo '{}'
+  else
+    echo '{}'
+  fi
+}
+
+merge_sig() {
+  base="$1"
+  sig="$2"
+  signer=$(echo "$sig" | sed -n 's/.*"signer"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+  signature=$(echo "$sig" | sed -n 's/.*"signature"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+  if [ -n "$signer" ] && [ -n "$signature" ]; then
+  payload=$(cat <<EOF
+$base
+EOF
+)
+    # inject signer/signature before closing brace
+    echo "$payload" | sed "s/}$/,\"signer\":\"$signer\",\"signature\":\"$signature\"}/"
+  else
+    echo "$base"
+  fi
+}
+
+while read -r old_sha new_sha ref; do
+  commits_json=$(build_commits_json "$old_sha" "$new_sha")
+  sig_json=$(sign_push "$REPO_PATH" "$ref" "$old_sha" "$new_sha")
+  base_payload=$(cat <<EOF
+{
+  "repo": "$REPO_PATH",
+  "ref": "$ref",
+  "old_sha": "$old_sha",
+  "new_sha": "$new_sha",
+  "pusher": "$PUSHER",
+  "commits_detail": $commits_json
+}
+EOF
+)
+  payload=$(merge_sig "$base_payload" "$sig_json")
+
+  if [ -n "$HOOK_TOKEN" ]; then
+    curl -sf -X POST "$FORGEPULSE_URL" \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $HOOK_TOKEN" \
+      -d "$payload" >/dev/null 2>&1 || true
+  else
+    curl -sf -X POST "$FORGEPULSE_URL" \
+      -H "Content-Type: application/json" \
+      -d "$payload" >/dev/null 2>&1 || true
+  fi
+done

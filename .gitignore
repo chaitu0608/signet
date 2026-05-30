@@ -1,0 +1,27 @@
+# env & secrets
+.env
+.env.*
+*.pem
+
+# Go
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+
+# Node
+node_modules/
+
+# Foundry
+contracts/cache/
+contracts/out/
+contracts/broadcast/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Docker
+*.log

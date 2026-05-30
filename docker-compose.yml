@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: forgepulse
+      POSTGRES_PASSWORD: forgepulse
+      POSTGRES_DB: forgepulse
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  server:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgres://forgepulse:forgepulse@postgres:5432/forgepulse?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      RPC_URL: ${RPC_URL:-}
+      CHAIN_ID: ${CHAIN_ID:-84532}
+      RELAYER_PRIVATE_KEY: ${RELAYER_PRIVATE_KEY:-}
+      ANCHOR_ADDR: ${ANCHOR_ADDR:-}
+      BOUNTY_ADDR: ${BOUNTY_ADDR:-}
+      SBT_ADDR: ${SBT_ADDR:-}
+      ANCHOR_INTERVAL_SEC: "60"
+      SBT_INTERVAL_SEC: "300"
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  pgdata:
