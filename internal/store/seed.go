@@ -9,9 +9,9 @@ import (
 	"server/internal/domain"
 )
 
-// MaybeSeed inserts demo attested events when SIGNET_DEV_SEED=1.
+// MaybeSeed inserts demo attested events when SIGNET_DEV_SEED=1 or on Vercel.
 func MaybeSeed(ctx context.Context, st Store) {
-	if os.Getenv("SIGNET_DEV_SEED") != "1" {
+	if os.Getenv("SIGNET_DEV_SEED") != "1" && os.Getenv("VERCEL") != "1" {
 		return
 	}
 	now := time.Now().UTC()

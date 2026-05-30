@@ -4,7 +4,24 @@
 
 Every signed git push is **AI-reviewed**, **Merkle-anchored**, and posted as a **canonical EAS attestation** on Base Sepolia — recipient = your wallet. View your portable reputation at `/dev/0xYou` or embed a live Signet badge anywhere.
 
-## Quick start
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fchaitu0608%2Fsignet&project-name=signet&env=SIGNET_DEV_SEED&envDescription=Seed%20demo%20attested%20events%20on%20boot&envValue=1)
+
+**Repository:** https://github.com/chaitu0608/signet
+
+## Live demo (Vercel)
+
+After deploying (one-click button above, or `vercel deploy --prod`):
+
+| URL | What |
+|-----|------|
+| `/dev` | Signet home — live ticker + how to verify |
+| `/dev/leaderboard` | Top developers by attested rep |
+| `/dev/0xabc0000000000000000000000000000000000001` | Demo profile (seeded data) |
+| `/embed/0xAddress?v=standard` | Embeddable badge iframe |
+
+> **Note:** WebSockets (`/live`) are disabled on Vercel serverless; the UI polls `/api/dev/recent` instead. On-chain workers require a long-running host (Railway, Fly, Docker).
+
+## Quick start (local)
 
 ```bash
 go mod tidy
@@ -69,6 +86,17 @@ node sign-push.mjs /path/to/repo refs/heads/main 0000... abc123...
 | `SIGNET_DEV_SEED` | Set to `1` to inject demo attested events |
 | `DATABASE_URL` | Postgres (optional) |
 | `REDIS_URL` | Redis pub/sub (optional) |
+| `VERCEL` | Set automatically on Vercel; enables demo seed + disables chain workers |
+
+## Deploy to Vercel
+
+```bash
+npm i -g vercel
+vercel login
+vercel deploy --prod
+```
+
+Or import from GitHub: [vercel.com/new/clone → signet](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fchaitu0608%2Fsignet)
 
 ## Verification
 
