@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ForgePulse War Room</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: #050505;
+      color: #33ff33;
+      font-family: "SF Mono", "Fira Code", Consolas, monospace;
+      font-size: 12px;
+      overflow: hidden;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid #1a3a1a;
+      background: #080808;
+      height: 40px;
+    }
+    header h1 { font-size: 0.85rem; letter-spacing: 0.25em; }
+    header a { color: #446644; text-decoration: none; font-size: 0.65rem; }
+    #stats { display: flex; gap: 1.2rem; color: #448844; font-size: 0.65rem; }
+    #stats b { color: #33ff33; }
+    #war-banner, #force-banner {
+      display: none;
+      text-align: center;
+      padding: 0.5rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+    }
+    #war-banner {
+      background: #ff0044;
+      color: #fff;
+      animation: strobe 0.3s ease-in-out 6;
+    }
+    #force-banner {
+      background: #ff6600;
+      color: #000;
+    }
+    @keyframes strobe {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    main {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      height: calc(100% - 40px);
+    }
+    #constellation-wrap {
+      position: relative;
+      border-right: 1px solid #1a2a1a;
+    }
+    #constellation {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    #commit-rain {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 80px;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .rain-msg {
+      position: absolute;
+      white-space: nowrap;
+      color: #aaffaa;
+      font-size: 0.7rem;
+      animation: rain 4s linear forwards;
+      text-shadow: 0 0 8px #33ff33;
+    }
+    @keyframes rain {
+      from { transform: translateX(100vw); opacity: 1; }
+      to { transform: translateX(-100%); opacity: 0.2; }
+    }
+    #right {
+      display: flex;
+      flex-direction: column;
+      background: #080808;
+    }
+    #feed {
+      flex: 1;
+      overflow-y: auto;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .line {
+      padding: 0.15rem 0.6rem;
+      border-left: 2px solid transparent;
+    }
+    .line:hover { background: #111; }
+    .line.war { color: #ff4488; border-left-color: #ff0044; }
+    .line.force { color: #ff8844; border-left-color: #ff6600; }
+    .line.watch .src { color: #33ff99; }
+    .line.github .src { color: #ffaa33; }
+    .line.native .src { color: #33ccff; }
+    #latency-panel {
+      padding: 0.6rem;
+      font-size: 0.65rem;
+      color: #556655;
+      min-height: 120px;
+    }
+    #latency-panel .lag-warn { color: #ffaa33; margin-top: 0.3rem; }
+    #latency-panel .war-count { color: #ff4488; }
+    #status-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #333; display: inline-block; margin-right: 0.3rem;
+    }
+    #status-dot.live { background: #33ff33; box-shadow: 0 0 6px #33ff33; }
+    #status-dot.dead { background: #ff3333; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><span id="status-dot"></span> FORGEPULSE WAR ROOM</h1>
+    <div id="stats">
+      <span>EPS <b id="eps">0</b></span>
+      <span>VIEWERS <b id="viewers">0</b></span>
+      <span>WARS <b id="wars">0</b></span>
+      <span>LAST <b id="last">—</b></span>
+    </div>
+    <a href="/dev">signet rep</a> · <a href="/zendo">stillroom</a>
+  </header>
+  <div id="war-banner">BRANCH WAR — COLLISION DETECTED</div>
+  <div id="force-banner">FORCE PUSH</div>
+  <main>
+    <div id="constellation-wrap">
+      <canvas id="constellation"></canvas>
+      <div id="commit-rain"></div>
+    </div>
+    <div id="right">
+      <div id="feed"></div>
+      <div id="latency-panel">
+        <div id="last-event">Waiting for git ops...</div>
+        <div id="lag-info"></div>
+        <div class="war-count" id="war-info"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("constellation");
+    const ctx = canvas.getContext("2d");
+    const feed = document.getElementById("feed");
+    const rain = document.getElementById("commit-rain");
+    const warBanner = document.getElementById("war-banner");
+    const forceBanner = document.getElementById("force-banner");
+    const statusDot = document.getElementById("status-dot");
+    const lastEventEl = document.getElementById("last-event");
+    const lagInfo = document.getElementById("lag-info");
+    const warInfo = document.getElementById("war-info");
+
+    const nodes = new Map();
+    let ws = null;
+    let eventTimes = [];
+    let lastPushAt = null;
+    let audioCtx = null;
+    let rainCount = 0;
+
+    const center = { x: 0, y: 0 };
+
+    function resize() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+      center.x = canvas.width / 2;
+      center.y = canvas.height / 2;
+      drawConstellation();
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    document.body.addEventListener("click", () => {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }, { once: true });
+
+    function tone(freq, dur, type = "sine", vol = 0.06) {
+      if (!audioCtx) return;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = type;
+      o.frequency.value = freq;
+      g.gain.value = vol;
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      o.start();
+      o.stop(audioCtx.currentTime + dur);
+    }
+
+    function playSound(ev) {
+      if (ev.type === "branch_war") tone(80, 0.4, "sawtooth", 0.12);
+      else if (ev.type === "force_push" || ev.force) tone(200, 0.3, "square", 0.1);
+      else if (ev.source === "watch") tone(1200, 0.05, "sine", 0.04);
+      else if (ev.source === "github") tone(300, 0.15, "triangle", 0.06);
+      else tone(600, 0.08, "sine", 0.04);
+    }
+
+    function nodeKey(repo, branch) { return repo + ":" + branch; }
+
+    function upsertNode(ev) {
+      if (!ev.repo || !ev.branch) return;
+      const key = nodeKey(ev.repo, ev.branch);
+      let n = nodes.get(key);
+      if (!n) {
+        const angle = Math.random() * Math.PI * 2;
+        const r = 80 + Math.random() * Math.min(canvas.width, canvas.height) * 0.25;
+        n = {
+          repo: ev.repo, branch: ev.branch,
+          x: center.x + Math.cos(angle) * r,
+          y: center.y + Math.sin(angle) * r,
+          pulse: 0, flash: 0, war: 0, pusher: ev.pusher
+        };
+        nodes.set(key, n);
+      }
+      n.pulse = 1;
+      n.pusher = ev.pusher;
+      n.last = Date.now();
+      if (ev.type === "branch_war") n.war = 1;
+      if (ev.force || ev.type === "force_push") n.flash = 1;
+    }
+
+    function drawConstellation() {
+      ctx.fillStyle = "#050505";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const now = Date.now();
+      for (const [key, n] of nodes) {
+        if (now - n.last > 60000) { nodes.delete(key); continue; }
+
+        n.pulse *= 0.92;
+        n.war *= 0.95;
+        n.flash *= 0.9;
+
+        const r = 12 + n.pulse * 20;
+        const color = n.war > 0.3 ? `rgba(255,0,68,${0.5 + n.war * 0.5})`
+          : n.flash > 0.3 ? `rgba(255,100,0,${0.5 + n.flash * 0.5})`
+          : `rgba(51,255,51,${0.3 + n.pulse * 0.5})`;
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+
+        ctx.fillStyle = "#88cc88";
+        ctx.font = "10px monospace";
+        ctx.fillText(n.branch.slice(0, 16), n.x - 20, n.y + r + 12);
+      }
+
+      ctx.strokeStyle = "rgba(51,255,51,0.08)";
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, 40, 0, Math.PI * 2);
+      ctx.stroke();
+
+      requestAnimationFrame(drawConstellation);
+    }
+    drawConstellation();
+
+    function spawnRain(commits) {
+      if (!commits || !commits.length) return;
+      commits.slice(0, 5).forEach((c, i) => {
+        const el = document.createElement("div");
+        el.className = "rain-msg";
+        el.textContent = `${c.sha}  ${c.message}`;
+        el.style.top = `${10 + i * 14}px`;
+        el.style.animationDelay = `${i * 0.2}s`;
+        rain.appendChild(el);
+        rainCount++;
+        setTimeout(() => { el.remove(); rainCount--; }, 4500);
+      });
+    }
+
+    function esc(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    function appendLine(ev) {
+      const line = document.createElement("div");
+      const isWar = ev.type === "branch_war";
+      const isForce = ev.type === "force_push" || ev.force;
+      line.className = "line" + (isWar ? " war" : isForce ? " force" : " " + (ev.source || ""));
+      const ts = new Date(ev.ts).toTimeString().slice(0, 8);
+      const type = (ev.type || "event").toUpperCase().replace(/_/g, " ");
+      const attackers = ev.attackers ? ` [${ev.attackers.join(" vs ")}]` : "";
+      line.innerHTML =
+        `<span class="ts">${ts}</span> <span class="type">${type}</span> ` +
+        `<span class="src">[${esc(ev.source)}]</span> ` +
+        `<span>${esc(ev.pusher)}@${esc(ev.repo)} ${esc(ev.branch)} ${esc(ev.new_sha || "")}</span>${attackers}`;
+      feed.appendChild(line);
+      while (feed.children.length > 300) feed.removeChild(feed.firstChild);
+      feed.scrollTop = feed.scrollHeight;
+    }
+
+    function handleEvent(ev) {
+      upsertNode(ev);
+      appendLine(ev);
+      playSound(ev);
+      spawnRain(ev.commits_detail);
+
+      if (ev.type === "branch_war") {
+        warBanner.style.display = "block";
+        setTimeout(() => { warBanner.style.display = "none"; }, 6000);
+        warInfo.textContent = `Active collision: ${(ev.attackers || []).join(" vs ")} on ${ev.branch}`;
+      }
+      if (ev.type === "force_push" || ev.force) {
+        forceBanner.style.display = "block";
+        setTimeout(() => { forceBanner.style.display = "none"; }, 5000);
+      }
+
+      lastEventEl.innerHTML =
+        `<b>${esc(ev.type)}</b> ${esc(ev.repo)}/${esc(ev.branch)} by ${esc(ev.pusher)}`;
+
+      let lag = "";
+      if (ev.github_lag_ms > 0) {
+        lag += `<div class="lag-warn">GitHub was <b>${ev.github_lag_ms}ms</b> behind reality</div>`;
+      }
+      if (ev.latency_ms != null) {
+        lag += `<div>Ingest latency: <b>${ev.latency_ms}ms</b> · source <b>${esc(ev.source)}</b></div>`;
+      }
+      lagInfo.innerHTML = lag;
+
+      lastPushAt = Date.now();
+      eventTimes.push(lastPushAt);
+      eventTimes = eventTimes.filter(t => Date.now() - t < 10000);
+      document.getElementById("eps").textContent = (eventTimes.length / 10).toFixed(1);
+      document.getElementById("last").textContent = "now";
+    }
+
+    function connect() {
+      const proto = location.protocol === "https:" ? "wss:" : "ws:";
+      ws = new WebSocket(`${proto}//${location.host}/live`);
+      ws.onopen = () => { statusDot.className = "live"; };
+      ws.onclose = () => { statusDot.className = "dead"; setTimeout(connect, 2000); };
+      ws.onmessage = (e) => {
+        let msg;
+        try { msg = JSON.parse(e.data); } catch { return; }
+        if (msg.type === "event" && msg.event) handleEvent(msg.event);
+        if (msg.type === "presence") {
+          document.getElementById("viewers").textContent = msg.viewers ?? 0;
+          document.getElementById("wars").textContent = msg.wars_active ?? 0;
+        }
+      };
+    }
+
+    setInterval(() => {
+      if (!lastPushAt) return;
+      const sec = Math.floor((Date.now() - lastPushAt) / 1000);
+      document.getElementById("last").textContent =
+        sec < 5 ? "now" : sec < 60 ? `${sec}s` : `${Math.floor(sec/60)}m`;
+    }, 1000);
+
+    connect();
+  </script>
+</body>
+</html>

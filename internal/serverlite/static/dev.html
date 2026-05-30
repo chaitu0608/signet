@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <title>Signet — Proof of Code</title>
+  <meta id="og-meta" property="og:title" content="Signet — Proof of Code" />
+  <meta id="og-image" property="og:image" content="" />
+  <style>
+    :root {
+      --lime: #a3e635;
+      --sky: #7dd3fc;
+      --bg: #060608;
+      --panel: #0c0c14;
+      --border: #1e293b;
+      --muted: #64748b;
+      --text: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: "SF Mono", ui-monospace, monospace;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+    header {
+      padding: 1rem 2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .brand { display: flex; align-items: center; gap: 0.75rem; }
+    .brand img { width: 28px; height: 28px; }
+    .brand h1 { font-size: 0.85rem; color: var(--lime); letter-spacing: 0.12em; }
+    .brand span { color: var(--muted); font-size: 0.65rem; letter-spacing: 0.08em; }
+    header nav a { color: var(--muted); text-decoration: none; font-size: 0.75rem; margin-left: 1rem; }
+    header nav a:hover { color: var(--sky); }
+    main { max-width: 960px; margin: 0 auto; padding: 2rem; }
+    .hero { display: flex; gap: 1.5rem; align-items: flex-start; margin-bottom: 2rem; flex-wrap: wrap; }
+    .avatar { width: 72px; height: 72px; border-radius: 50%; flex-shrink: 0; }
+    .badge-chip {
+      display: inline-block; background: #14532d; color: var(--lime);
+      font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 4px; letter-spacing: 0.1em; margin-bottom: 0.5rem;
+    }
+    .addr { font-size: 1.1rem; word-break: break-all; }
+    .ens { color: var(--sky); font-size: 0.85rem; margin-top: 0.25rem; }
+    .stats { display: flex; gap: 2rem; margin-top: 1rem; flex-wrap: wrap; }
+    .stat-val { font-size: 1.75rem; font-weight: 700; color: var(--lime); }
+    .stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; }
+    .delta-up { color: var(--lime); font-size: 0.75rem; }
+    .section { margin-bottom: 2rem; }
+    .section-title { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; margin-bottom: 0.75rem; text-transform: uppercase; }
+    .heatmap { display: flex; gap: 3px; flex-wrap: wrap; }
+    .heat-cell {
+      width: 14px; height: 14px; border-radius: 2px; background: #1e293b; cursor: default;
+      title: attr(data-tip);
+    }
+    .sparkline { width: 100%; height: 60px; }
+    .repo-bar { margin-bottom: 0.5rem; }
+    .repo-bar-label { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 0.2rem; }
+    .repo-bar-track { height: 8px; background: #1e293b; border-radius: 4px; overflow: hidden; }
+    .repo-bar-fill { height: 100%; background: linear-gradient(90deg, var(--lime), var(--sky)); border-radius: 4px; }
+    .cat-mix { display: flex; height: 12px; border-radius: 4px; overflow: hidden; margin-top: 0.5rem; }
+    .cat-seg { height: 100%; }
+    .cat-legend { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 0.5rem; font-size: 0.65rem; color: var(--muted); }
+    .filters { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .filters input, .filters select {
+      background: #0f172a; border: 1px solid #334155; color: var(--text);
+      padding: 0.4rem 0.6rem; font-family: inherit; font-size: 0.8rem;
+    }
+    .attest {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+      padding: 1rem; margin-bottom: 0.75rem; transition: opacity 0.3s;
+    }
+    .attest.new { animation: fadeIn 1s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; } }
+    .attest-header { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .score { background: #1e3a5f; color: var(--sky); padding: 0.15rem 0.5rem; border-radius: 3px; font-size: 0.75rem; }
+    .cat { background: #1e293b; color: #94a3b8; padding: 0.15rem 0.5rem; border-radius: 3px; font-size: 0.7rem; margin-left: 0.3rem; }
+    .summary { color: #cbd5e1; font-size: 0.85rem; margin: 0.5rem 0; }
+    .meta { font-size: 0.7rem; color: var(--muted); display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+    .meta a { color: var(--sky); }
+    button, .btn {
+      background: #1e293b; border: 1px solid #475569; color: var(--text);
+      padding: 0.5rem 1rem; cursor: pointer; font-family: inherit; font-size: 0.8rem;
+    }
+    button:hover, .btn:hover { border-color: var(--lime); }
+    button.verify { font-size: 0.7rem; padding: 0.25rem 0.5rem; }
+    button.verify.ok { border-color: var(--lime); color: var(--lime); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 0.75rem; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
+    th { color: var(--muted); font-size: 0.65rem; text-transform: uppercase; }
+    tr.lb-row { cursor: pointer; position: relative; }
+    tr.lb-row:hover { background: #0f172a; }
+    .mini-mix { display: flex; height: 6px; width: 80px; border-radius: 2px; overflow: hidden; }
+    .delta-pos { color: var(--lime); }
+    .delta-zero { color: var(--muted); }
+    .pitch { color: var(--muted); font-size: 0.85rem; max-width: 640px; line-height: 1.6; margin-bottom: 1.5rem; }
+    .hidden { display: none; }
+    .home-hero { margin-bottom: 2.5rem; }
+    .home-hero h2 { font-size: 1.5rem; color: var(--lime); margin-bottom: 0.5rem; }
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 2rem 0; }
+    .step { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+    .step-num { color: var(--lime); font-size: 1.25rem; font-weight: 700; }
+    .step p { color: var(--muted); font-size: 0.8rem; margin-top: 0.5rem; }
+    .ctas { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; }
+    .ticker { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; max-height: 200px; overflow-y: auto; }
+    .ticker-item { padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; display: flex; justify-content: space-between; gap: 1rem; }
+    .ticker-item:last-child { border-bottom: none; }
+    .ticker-item a { color: var(--sky); text-decoration: none; }
+    .embed-picker { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+    .embed-preview { position: absolute; right: 1rem; z-index: 10; background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 0.25rem; display: none; pointer-events: none; }
+    tr.lb-row:hover .embed-preview { display: block; }
+    .security-badge { display: inline-block; background: #450a0a; color: #fca5a5; font-size: 0.65rem; padding: 0.15rem 0.4rem; border-radius: 3px; margin-left: 0.5rem; }
+    code { background: #1e293b; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.85em; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="/logo.svg" alt="Signet" />
+      <div>
+        <h1>SIGNET</h1>
+        <span>PROOF OF CODE</span>
+      </div>
+    </div>
+    <nav>
+      <a href="/dev">Home</a>
+      <a href="/dev/leaderboard">Leaderboard</a>
+      <a href="/">War room</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- HOME -->
+    <div id="home-view" class="hidden">
+      <div class="home-hero">
+        <h2>Proof of code.</h2>
+        <p class="pitch">Every signed git push becomes an AI-graded <strong style="color:var(--lime)">EAS attestation</strong> on Base Sepolia — portable, verifiable, embeddable developer reputation.</p>
+      </div>
+      <div class="section">
+        <div class="section-title">Live attestations</div>
+        <div class="ticker" id="ticker"></div>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><strong>Sign your hook</strong><p>Configure post-receive with EIP-712 push signatures tied to your wallet.</p></div>
+        <div class="step"><div class="step-num">2</div><strong>Push code</strong><p>Every push is AI-reviewed, Merkle-anchored, and attested on EAS.</p></div>
+        <div class="step"><div class="step-num">3</div><strong>Check /dev/0xYou</strong><p>View your profile, embed a badge, share your onchain rep.</p></div>
+      </div>
+      <div class="ctas">
+        <a class="btn" href="/dev/leaderboard">View leaderboard →</a>
+        <a class="btn" href="/">Open war room →</a>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div id="leaderboard-view" class="hidden">
+      <p class="pitch">Portable developer reputation — ranked by attested quality score on Base Sepolia.</p>
+      <div class="filters" style="margin-bottom:1.5rem">
+        <input id="lb-search" placeholder="Search address…" style="min-width:240px" />
+      </div>
+      <table>
+        <thead><tr><th>#</th><th>Developer</th><th>Rep</th><th>7d Δ</th><th>Commits</th><th>Mix</th></tr></thead>
+        <tbody id="lb-body"></tbody>
+      </table>
+    </div>
+
+    <!-- PROFILE -->
+    <div id="profile-view" class="hidden">
+      <div class="hero">
+        <div class="avatar" id="avatar"></div>
+        <div>
+          <div class="badge-chip">SIGNET VERIFIED</div>
+          <div class="addr" id="profile-addr"></div>
+          <div class="ens" id="profile-ens"></div>
+          <div class="stats">
+            <div><div class="stat-val" id="total-rep">0</div><div class="stat-label">Total rep</div></div>
+            <div><div class="stat-val" id="commit-count">0</div><div class="stat-label">Attested</div></div>
+            <div><div class="stat-val" id="weekly-delta">0</div><div class="stat-label">7d delta <span id="delta-arrow" class="delta-up"></span></div></div>
+            <div><div class="stat-val" id="sec-flags">0</div><div class="stat-label">Security flags</div></div>
+          </div>
+          <div class="embed-picker">
+            <button id="copy-compact">Copy compact</button>
+            <button id="copy-standard">Copy standard</button>
+            <button id="copy-detailed">Copy detailed</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">30-day activity</div>
+        <div class="heatmap" id="heatmap"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Rep sparkline (30d)</div>
+        <svg class="sparkline" id="sparkline" viewBox="0 0 400 60" preserveAspectRatio="none"></svg>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Repo breakdown</div>
+        <div id="repo-bars"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Category mix</div>
+        <div class="cat-mix" id="cat-mix"></div>
+        <div class="cat-legend" id="cat-legend"></div>
+      </div>
+
+      <div class="filters">
+        <input id="filter-repo" placeholder="Filter repo…" />
+        <select id="filter-cat">
+          <option value="">All categories</option>
+          <option>feature</option><option>fix</option><option>refactor</option>
+          <option>docs</option><option>test</option><option>chore</option>
+        </select>
+      </div>
+      <div id="attest-list"></div>
+    </div>
+  </main>
+
+  <script>
+    const EAS_EXPLORER = "https://base-sepolia.easscan.org/attestation/view/";
+    const CAT_COLORS = { feature:"#a3e635", fix:"#7dd3fc", refactor:"#c084fc", docs:"#94a3b8", test:"#fbbf24", chore:"#475569" };
+    let chainCfg = {};
+    let profileData = null;
+    let liveWS = null;
+
+    function pathAddr() {
+      const p = location.pathname.replace(/^\/dev\/?/, "").trim();
+      if (!p || p === "leaderboard") return null;
+      return p.startsWith("0x") ? p : null;
+    }
+
+    function jazzicon(el, addr) {
+      const seed = parseInt(addr.slice(2, 10), 16) || 0;
+      const hue = seed % 360;
+      el.style.background = `linear-gradient(135deg, hsl(${hue},70%,45%), hsl(${(hue+80)%360},70%,55%))`;
+    }
+
+    function shortAddr(a) {
+      return a.length > 12 ? a.slice(0,8)+"…"+a.slice(-4) : a;
+    }
+
+    async function loadChainCfg() {
+      try {
+        const r = await fetch("/api/chain");
+        chainCfg = await r.json();
+      } catch (_) {}
+    }
+
+    async function resolveENS(addr, el) {
+      if (!el) return;
+      try {
+        const r = await fetch("https://api.ensideas.com/ens/resolve/"+addr);
+        const d = await r.json();
+        if (d.name) el.textContent = d.name;
+      } catch (_) {}
+    }
+
+    function renderHeatmap(buckets) {
+      const el = document.getElementById("heatmap");
+      if (!buckets || !buckets.length) { el.innerHTML = "<span style='color:#64748b'>No activity yet</span>"; return; }
+      const max = Math.max(1, ...buckets.map(b => b.score));
+      el.innerHTML = buckets.map(b => {
+        const op = b.score ? Math.max(0.15, b.score / max) : 0.08;
+        return `<div class="heat-cell" style="background:rgba(163,230,53,${op})" title="${b.day}: ${b.score} rep, ${b.count} commits"></div>`;
+      }).join("");
+    }
+
+    function renderSparkline(buckets) {
+      const svg = document.getElementById("sparkline");
+      if (!buckets || buckets.length < 2) { svg.innerHTML = ""; return; }
+      const w = 400, h = 60, pad = 4;
+      const max = Math.max(1, ...buckets.map(b => b.score));
+      const pts = buckets.map((b, i) => {
+        const x = pad + (i / (buckets.length - 1)) * (w - 2*pad);
+        const y = h - pad - (b.score / max) * (h - 2*pad);
+        return `${x},${y}`;
+      }).join(" ");
+      svg.innerHTML = `<polyline fill="none" stroke="#a3e635" stroke-width="2" points="${pts}"/>`;
+    }
+
+    function renderRepoBars(repos) {
+      const el = document.getElementById("repo-bars");
+      if (!repos || !repos.length) { el.innerHTML = "<span style='color:#64748b'>No repos yet</span>"; return; }
+      const max = Math.max(1, ...repos.map(r => r.score));
+      el.innerHTML = repos.slice(0,5).map(r => `
+        <div class="repo-bar">
+          <div class="repo-bar-label"><span>${r.repo}</span><span>${r.score} rep · ${r.count} commits</span></div>
+          <div class="repo-bar-track"><div class="repo-bar-fill" style="width:${(r.score/max*100).toFixed(0)}%"></div></div>
+        </div>`).join("");
+    }
+
+    function renderCatMix(mix) {
+      const bar = document.getElementById("cat-mix");
+      const leg = document.getElementById("cat-legend");
+      if (!mix || !mix.length) { bar.innerHTML = ""; leg.innerHTML = ""; return; }
+      const total = mix.reduce((s,c) => s + c.count, 0) || 1;
+      bar.innerHTML = mix.map(c => {
+        const w = (c.count/total*100).toFixed(1);
+        const col = CAT_COLORS[c.category] || "#475569";
+        return `<div class="cat-seg" style="width:${w}%;background:${col}" title="${c.category}: ${c.count}"></div>`;
+      }).join("");
+      leg.innerHTML = mix.map(c => `<span>${c.category} ${Math.round(c.count/total*100)}%</span>`).join("");
+    }
+
+    function miniMix(mix) {
+      if (!mix || !mix.length) return "";
+      const total = mix.reduce((s,c) => s + c.count, 0) || 1;
+      return `<div class="mini-mix">${mix.map(c => {
+        const w = (c.count/total*100).toFixed(0);
+        return `<div style="width:${w}%;background:${CAT_COLORS[c.category]||'#475569'}"></div>`;
+      }).join("")}</div>`;
+    }
+
+    async function verifyOnChain(uid, btn) {
+      if (!uid || !chainCfg.eas) { btn.textContent = "No EAS config"; return; }
+      btn.textContent = "Verifying…";
+      try {
+        const data = "0x" + uid.slice(2).padStart(64, "0");
+        const call = {
+          jsonrpc:"2.0", id:1, method:"eth_call",
+          params:[{ to: chainCfg.eas, data: "0xbf833e40" + data.slice(2) }, "latest"]
+        };
+        const rpc = "https://sepolia.base.org";
+        const r = await fetch(rpc, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(call) });
+        const j = await r.json();
+        if (j.result && j.result !== "0x" && j.result.length > 10) {
+          btn.textContent = "✓ Verified onchain";
+          btn.classList.add("ok");
+        } else {
+          btn.textContent = "Not found onchain";
+        }
+      } catch (e) {
+        btn.textContent = "Verify failed";
+      }
+    }
+
+    function renderAttestations(attestations, prepend) {
+      const repoF = document.getElementById("filter-repo")?.value.toLowerCase() || "";
+      const catF = document.getElementById("filter-cat")?.value || "";
+      const list = document.getElementById("attest-list");
+      const filtered = (attestations || []).filter(a => {
+        if (repoF && !(a.repo||"").toLowerCase().includes(repoF)) return false;
+        if (catF && a.category !== catF) return false;
+        return true;
+      });
+      const html = filtered.map(a => {
+        const eas = a.attest_uid ? `<a href="${EAS_EXPLORER}${a.attest_uid}" target="_blank">EAS ↗</a>` : "";
+        const sha = (a.new_sha||"").slice(0,8);
+        const flags = (a.security_flags||[]).length ? `<span class="security-badge">⚠ ${a.security_flags.length} flags</span>` : "";
+        const verifyBtn = a.attest_uid ? `<button class="verify" data-uid="${a.attest_uid}">Verify on-chain</button>` : "";
+        return `<div class="attest${prepend && a.id===prepend.id?' new':''}">
+          <div class="attest-header">
+            <span><strong>${a.repo||"?"}</strong> / ${a.branch||"?"} <code>${sha}</code>${flags}</span>
+            <span><span class="score">${a.quality_score||"—"}</span><span class="cat">${a.category||"chore"}</span></span>
+          </div>
+          <div class="summary">${a.quality_summary||""}</div>
+          <div class="meta">${new Date(a.ts).toLocaleString()} · ${eas} ${verifyBtn}</div>
+        </div>`;
+      }).join("") || "<p style='color:#64748b'>No attestations yet. Sign your pushes and wait for the anchor batch.</p>";
+      list.innerHTML = html;
+      list.querySelectorAll("button.verify").forEach(btn => {
+        btn.onclick = () => verifyOnChain(btn.dataset.uid, btn);
+      });
+    }
+
+    async function loadTicker() {
+      const el = document.getElementById("ticker");
+      try {
+        const r = await fetch("/api/dev/recent?limit=15");
+        const d = await r.json();
+        el.innerHTML = (d.recent||[]).map(e =>
+          `<div class="ticker-item"><span><a href="/dev/${e.signer}">${shortAddr(e.signer||"?")}</a> · ${e.repo||"?"}</span><span class="score">${e.quality_score||0}</span></div>`
+        ).join("") || "<span style='color:#64748b'>Waiting for attestations…</span>";
+      } catch (_) { el.innerHTML = "<span style='color:#64748b'>Ticker offline</span>"; }
+    }
+
+    function connectLive(onEvent) {
+      if (liveWS) liveWS.close();
+      const proto = location.protocol === "https:" ? "wss:" : "ws:";
+      liveWS = new WebSocket(proto + "//" + location.host + "/live");
+      liveWS.onmessage = (msg) => {
+        try {
+          const d = JSON.parse(msg.data);
+          if (d.type === "event_updated" || d.type === "event") onEvent(d.event);
+        } catch (_) {}
+      };
+    }
+
+    function showHome() {
+      document.getElementById("home-view").classList.remove("hidden");
+      document.getElementById("leaderboard-view").classList.add("hidden");
+      document.getElementById("profile-view").classList.add("hidden");
+      loadTicker();
+      connectLive(e => {
+        if (e.attest_uid) {
+          loadTicker();
+          const t = document.getElementById("ticker");
+          const item = document.createElement("div");
+          item.className = "ticker-item";
+          item.innerHTML = `<span><a href="/dev/${e.signer}">${shortAddr(e.signer||"?")}</a> · ${e.repo||"?"}</span><span class="score">${e.quality_score||0}</span>`;
+          t.prepend(item);
+        }
+      });
+    }
+
+    let lbData = [];
+
+    async function loadLeaderboard() {
+      document.getElementById("leaderboard-view").classList.remove("hidden");
+      document.getElementById("profile-view").classList.add("hidden");
+      document.getElementById("home-view").classList.add("hidden");
+      const r = await fetch("/api/dev/leaderboard");
+      const data = await r.json();
+      lbData = data.leaderboard || [];
+      renderLB(lbData);
+    }
+
+    function renderLB(entries) {
+      const q = (document.getElementById("lb-search")?.value||"").toLowerCase();
+      const filtered = q ? entries.filter(e => e.address.toLowerCase().includes(q)) : entries;
+      const tbody = document.getElementById("lb-body");
+      tbody.innerHTML = filtered.map((e,i) => {
+        const delta = e.weekly_delta || 0;
+        const deltaCls = delta > 0 ? "delta-pos" : "delta-zero";
+        const deltaStr = delta > 0 ? "+"+delta : delta;
+        return `<tr class="lb-row" onclick="location.href='/dev/${e.address}'">
+          <td>${i+1}</td>
+          <td style="position:relative">${shortAddr(e.address)}
+            <div class="embed-preview"><iframe src="/embed/${e.address}?v=standard" width="320" height="80" loading="lazy" style="border:none"></iframe></div>
+          </td>
+          <td>${e.total_score}</td>
+          <td class="${deltaCls}">${deltaStr}</td>
+          <td>${e.commit_count}</td>
+          <td>${miniMix(e.category_mix)}</td>
+        </tr>`;
+      }).join("") || "<tr><td colspan='6'>No attestations yet — push signed code to Signet.</td></tr>";
+    }
+
+    document.getElementById("lb-search")?.addEventListener("input", () => renderLB(lbData));
+
+    async function loadProfile(addr) {
+      document.getElementById("profile-view").classList.remove("hidden");
+      document.getElementById("leaderboard-view").classList.add("hidden");
+      document.getElementById("home-view").classList.add("hidden");
+
+      document.getElementById("profile-addr").textContent = addr;
+      document.getElementById("profile-ens").textContent = "";
+      jazzicon(document.getElementById("avatar"), addr);
+      resolveENS(addr, document.getElementById("profile-ens"));
+
+      document.getElementById("og-meta").content = "Signet — " + shortAddr(addr);
+      document.getElementById("og-image").content = location.origin + "/api/dev/" + addr + "/og.svg";
+
+      const r = await fetch("/api/dev/" + addr);
+      profileData = await r.json();
+      document.getElementById("total-rep").textContent = profileData.total_score || 0;
+      document.getElementById("commit-count").textContent = profileData.commit_count || 0;
+      const wd = profileData.weekly_delta || 0;
+      document.getElementById("weekly-delta").textContent = wd;
+      document.getElementById("delta-arrow").textContent = wd > 0 ? "↑" : "";
+      document.getElementById("sec-flags").textContent = profileData.security_flag_count || 0;
+
+      renderHeatmap(profileData.sparkline);
+      renderSparkline(profileData.sparkline);
+      renderRepoBars(profileData.top_repos);
+      renderCatMix(profileData.category_mix);
+      renderAttestations(profileData.attestations);
+
+      connectLive(e => {
+        if (!e.signer || e.signer.toLowerCase() !== addr.toLowerCase()) return;
+        if (e.attest_uid || e.quality_score) {
+          profileData.attestations = [e, ...(profileData.attestations||[]).filter(a => a.id !== e.id)];
+          if (e.quality_score) profileData.total_score = (profileData.total_score||0) + (e.quality_score||0);
+          document.getElementById("total-rep").textContent = profileData.total_score;
+          renderAttestations(profileData.attestations, e);
+        }
+      });
+    }
+
+    function copyEmbed(variant) {
+      const addr = pathAddr();
+      const sizes = { compact:[200,60], standard:[320,80], detailed:[440,140] };
+      const [w,h] = sizes[variant] || sizes.standard;
+      const snippet = `<iframe src="${location.origin}/embed/${addr}?v=${variant}" width="${w}" height="${h}" style="border:none" title="Signet Dev Rep"></iframe>`;
+      navigator.clipboard.writeText(snippet);
+      alert("Embed snippet copied (" + variant + ")");
+    }
+
+    document.getElementById("copy-compact")?.addEventListener("click", () => copyEmbed("compact"));
+    document.getElementById("copy-standard")?.addEventListener("click", () => copyEmbed("standard"));
+    document.getElementById("copy-detailed")?.addEventListener("click", () => copyEmbed("detailed"));
+
+    document.getElementById("filter-repo")?.addEventListener("input", () => {
+      if (profileData) renderAttestations(profileData.attestations);
+    });
+    document.getElementById("filter-cat")?.addEventListener("change", () => {
+      if (profileData) renderAttestations(profileData.attestations);
+    });
+
+    (async () => {
+      await loadChainCfg();
+      const p = location.pathname;
+      if (p.includes("/leaderboard")) {
+        await loadLeaderboard();
+      } else {
+        const addr = pathAddr();
+        if (addr) await loadProfile(addr);
+        else showHome();
+      }
+    })();
+  </script>
+</body>
+</html>

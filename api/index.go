@@ -5,13 +5,13 @@ import (
 	"net/url"
 	"strings"
 
-	"server/internal/server"
+	"server/internal/serverlite"
 )
 
 // Handler is the Vercel serverless entrypoint.
 func Handler(w http.ResponseWriter, r *http.Request) {
 	normalizeVercelPath(r)
-	server.Handler().ServeHTTP(w, r)
+	serverlite.Handler().ServeHTTP(w, r)
 }
 
 // normalizeVercelPath maps Vercel rewrite paths back to app routes.

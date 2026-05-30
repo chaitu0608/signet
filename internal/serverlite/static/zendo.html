@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stillroom</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: #0a0a0a;
+      color: #888;
+      font-family: "Georgia", "Times New Roman", serif;
+      overflow: hidden;
+      cursor: default;
+      user-select: none;
+    }
+    #mandala {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.35;
+    }
+    #bell-flash {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.08s ease-out;
+    }
+    #bell-flash.ring { opacity: 1; }
+    main {
+      position: relative;
+      z-index: 2;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+    }
+    #breath {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 1px solid #333;
+      background: radial-gradient(circle, #1a1a1a 0%, #0a0a0a 70%);
+      transform: scale(0.85);
+      transition: transform 0.1s linear;
+    }
+    #status {
+      text-align: center;
+      font-size: 0.85rem;
+      letter-spacing: 0.12em;
+      text-transform: lowercase;
+      line-height: 1.8;
+    }
+    #stillness { color: #555; font-size: 0.75rem; }
+    #broken {
+      display: none;
+      color: #666;
+      font-style: italic;
+      letter-spacing: 0.05em;
+    }
+    #hint {
+      position: fixed;
+      bottom: 1.5rem;
+      font-size: 0.65rem;
+      color: #333;
+      letter-spacing: 0.08em;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="mandala"></canvas>
+  <div id="bell-flash"></div>
+  <main>
+    <div id="breath"></div>
+    <div id="status">
+      <div id="presence">entering...</div>
+      <div id="stillness"></div>
+      <div id="broken">Silence was broken.</div>
+    </div>
+  </main>
+  <p id="hint">click once to allow the bell</p>
+
+  <script>
+    const breathEl = document.getElementById("breath");
+    const presenceEl = document.getElementById("presence");
+    const stillnessEl = document.getElementById("stillness");
+    const brokenEl = document.getElementById("broken");
+    const bellFlash = document.getElementById("bell-flash");
+    const canvas = document.getElementById("mandala");
+    const ctx = canvas.getContext("2d");
+    const hint = document.getElementById("hint");
+
+    let ws = null;
+    let sitting = false;
+    let mandalaSeed = "";
+    let mandalaLayers = 0;
+    let audioCtx = null;
+    let lastBreathSend = 0;
+    let startTime = performance.now();
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      drawMandala();
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    function enableAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        hint.style.display = "none";
+      }
+    }
+    document.body.addEventListener("click", enableAudio, { once: true });
+
+    function playBell() {
+      bellFlash.classList.add("ring");
+      setTimeout(() => bellFlash.classList.remove("ring"), 200);
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(392, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(196, audioCtx.currentTime + 1.2);
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 1.5);
+    }
+
+    function formatDuration(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      if (m === 0) return `${s}s of collective stillness`;
+      return `${m}m ${s}s of collective stillness`;
+    }
+
+    function seedToAngles(seedHex, count) {
+      const angles = [];
+      for (let i = 0; i < count; i++) {
+        const byte = parseInt(seedHex.substr((i * 2) % seedHex.length, 2), 16) || 0;
+        angles.push((byte / 255) * Math.PI * 2);
+      }
+      return angles;
+    }
+
+    function drawMandala() {
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const maxR = Math.min(w, h) * 0.38;
+      ctx.clearRect(0, 0, w, h);
+      if (!mandalaSeed || mandalaLayers === 0) return;
+
+      const segments = 8 + (mandalaLayers % 4);
+      const angles = seedToAngles(mandalaSeed, segments);
+
+      for (let layer = 1; layer <= mandalaLayers; layer++) {
+        const r = (maxR / 12) * layer;
+        ctx.strokeStyle = `rgba(180, 170, 150, ${0.08 + layer * 0.02})`;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        for (let i = 0; i < segments; i++) {
+          const a = angles[i] + (layer * 0.1);
+          const x = cx + Math.cos(a) * r;
+          const y = cy + Math.sin(a) * r;
+          const x2 = cx + Math.cos(a + Math.PI / segments) * (r * 0.6);
+          const y2 = cy + Math.sin(a + Math.PI / segments) * (r * 0.6);
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(x, y);
+          ctx.lineTo(x2, y2);
+          ctx.closePath();
+          ctx.stroke();
+        }
+      }
+    }
+
+    function send(obj) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(obj));
+      }
+    }
+
+    function connect() {
+      const proto = location.protocol === "https:" ? "wss:" : "ws:";
+      ws = new WebSocket(`${proto}//${location.host}/still`);
+
+      ws.onopen = () => {
+        brokenEl.style.display = "none";
+        sitting = true;
+        send({ type: "sit" });
+      };
+
+      ws.onmessage = (e) => {
+        let msg;
+        try { msg = JSON.parse(e.data); } catch { return; }
+
+        switch (msg.type) {
+          case "presence":
+            presenceEl.textContent =
+              msg.sitting === 1
+                ? "you sit alone"
+                : `${msg.sitting} sitting with you`;
+            stillnessEl.textContent = formatDuration(msg.stillness_seconds || 0);
+            break;
+          case "mandala":
+            mandalaSeed = msg.seed || "";
+            mandalaLayers = msg.layers || 0;
+            drawMandala();
+            break;
+          case "bell":
+            playBell();
+            break;
+          case "silence_broken":
+            brokenEl.style.display = "block";
+            mandalaSeed = "";
+            mandalaLayers = 0;
+            drawMandala();
+            sitting = false;
+            setTimeout(connect, 3000);
+            break;
+        }
+      };
+
+      ws.onclose = () => {
+        if (!brokenEl.style.display || brokenEl.style.display === "none") {
+          presenceEl.textContent = "disconnected";
+          setTimeout(connect, 3000);
+        }
+      };
+    }
+
+    function animate(now) {
+      const t = (now - startTime) / 1000;
+      const phase = (Math.sin(t * 0.8) + 1) / 2;
+      const scale = 0.82 + phase * 0.18;
+      breathEl.style.transform = `scale(${scale})`;
+
+      if (sitting && ws && ws.readyState === WebSocket.OPEN) {
+        if (now - lastBreathSend > 2000) {
+          send({ type: "breath", phase });
+          lastBreathSend = now;
+        }
+      }
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener("beforeunload", () => {
+      send({ type: "rise" });
+    });
+
+    connect();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

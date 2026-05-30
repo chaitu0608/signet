@@ -1,19 +1,16 @@
 {
   "version": 2,
+  "buildCommand": "cp -r static internal/serverlite/static",
   "build": {
     "env": {
       "SIGNET_DEV_SEED": "1",
-      "VERCEL": "1"
+      "VERCEL": "1",
+      "GO_VERSION": "1.22"
     }
   },
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/$1" }
   ],
-  "functions": {
-    "api/index.go": {
-      "includeFiles": "static/**"
-    }
-  },
   "headers": [
     {
       "source": "/embed/(.*)",
