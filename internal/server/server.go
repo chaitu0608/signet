@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"server/internal/chain"
+	"server/internal/payapi"
 	"server/internal/profile"
 	"server/internal/pulse"
 	"server/internal/relay"
@@ -104,9 +105,15 @@ func newMux() http.Handler {
 	mux.HandleFunc("/zendo", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(staticDir, "zendo.html"))
 	})
+	mux.HandleFunc("/paid-api", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(staticDir, "api.html"))
+	})
 	mux.HandleFunc("/web3", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/dev/leaderboard", http.StatusFound)
 	})
+
+	payapi.NewService(st, payapi.LoadConfig()).HandleRoutes(mux)
+
 	mux.Handle("/", http.FileServer(http.Dir(staticDir)))
 
 	return mux

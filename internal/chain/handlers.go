@@ -148,6 +148,7 @@ func HandleChainConfig(cfg Config) http.HandlerFunc {
 			"sbt":            cfg.SBT,
 			"eas":            cfg.EASAddr,
 			"eas_schema_uid": cfg.EASSchemaUID,
+			"reputation":     cfg.Reputation,
 			"enabled":        cfg.Enabled(),
 			"eas_enabled":    cfg.EASEnabled(),
 			"explorer":       "https://sepolia.basescan.org",

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Signet Paid API — x402 Reputation Oracle</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root { --bg:#0b0d12; --fg:#e8eaef; --muted:#8b93a7; --accent:#6ee7b7; --card:#141824; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background:var(--bg); color:var(--fg); line-height:1.6; }
+    main { max-width:860px; margin:0 auto; padding:2rem 1.25rem 4rem; }
+    h1 { font-size:1.6rem; margin:0 0 .25rem; }
+    .tag { color:var(--accent); font-size:.85rem; letter-spacing:.08em; text-transform:uppercase; }
+    p { color:var(--muted); }
+    section { background:var(--card); border:1px solid #22283a; border-radius:12px; padding:1rem 1.25rem; margin:1rem 0; }
+    h2 { font-size:1rem; margin:0 0 .75rem; color:var(--accent); }
+    code, pre { background:#0f131c; border:1px solid #22283a; border-radius:8px; }
+    pre { padding:1rem; overflow:auto; font-size:.82rem; }
+    a { color:var(--accent); }
+    table { width:100%; border-collapse:collapse; font-size:.85rem; }
+    td, th { text-align:left; padding:.45rem .25rem; border-bottom:1px solid #22283a; }
+    th { color:var(--muted); font-weight:600; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="tag">Signet · Proof of Code</p>
+    <h1>x402 Reputation Oracle API</h1>
+    <p>Machine-readable, EIP-712 signed developer reputation sold per query in USDC via the <a href="https://www.x402.org/">x402</a> HTTP payment protocol.</p>
+
+    <section>
+      <h2>Endpoints (paid)</h2>
+      <table>
+        <tr><th>Route</th><th>Price (default)</th><th>Returns</th></tr>
+        <tr><td><code>GET /v1/reputation/{addr}</code></td><td>$0.01 USDC</td><td>Signed summary report</td></tr>
+        <tr><td><code>GET /v1/reputation/{addr}/full</code></td><td>$0.05 USDC</td><td>Full report + attestation evidence</td></tr>
+        <tr><td><code>GET /v1/leaderboard</code></td><td>$0.02 USDC</td><td>Signed leaderboard snapshot</td></tr>
+        <tr><td><code>GET /v1/docs</code></td><td>free</td><td>API metadata JSON</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>Payment flow</h2>
+      <ol>
+        <li>Request without <code>X-PAYMENT</code> → server returns <strong>402</strong> with requirements</li>
+        <li>Sign EIP-3009 USDC authorization on Base Sepolia</li>
+        <li>Retry with <code>X-PAYMENT</code> header (base64 JSON payload)</li>
+        <li>Facilitator verifies &amp; settles → signed report in response</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Go client (x402-go)</h2>
+      <pre>package main
+
+import (
+  "fmt"
+  "github.com/mark3labs/x402-go/signers/evm"
+  x402http "github.com/mark3labs/x402-go/http"
+)
+
+func main() {
+  signer, _ := evm.NewSigner(
+    evm.WithPrivateKey("0xYOUR_KEY"),
+    evm.WithNetwork("base-sepolia"),
+    evm.WithToken("0x036CbD53842c5426634e7929541eC2318f3dCF7e", "USDC", 6),
+  )
+  client, _ := x402http.NewClient(x402http.WithSigner(signer))
+  resp, err := client.Get("https://YOUR_HOST/v1/reputation/0xabc...")
+  if err != nil { panic(err) }
+  defer resp.Body.Close()
+  fmt.Println("status", resp.Status)
+}</pre>
+    </section>
+
+    <section>
+      <h2>Environment (Railway / Fly)</h2>
+      <pre>X402_PAY_TO=0xYourWallet
+X402_NETWORK=base-sepolia
+X402_FACILITATOR_URL=https://x402.org/facilitator
+X402_PRICE=0.01
+ORACLE_PRIVATE_KEY=0x...   # signs reports (defaults to RELAYER_PRIVATE_KEY)
+REPUTATION_ADDR=0x...    # SignetReputation ERC-8004 registry
+SIGNET_DEV_SEED=1          # demo data on boot</pre>
+    </section>
+
+    <section>
+      <h2>MCP server</h2>
+      <p>Run <code>go run ./cmd/mcp</code> for agent-native tools: <code>get_reputation</code>, <code>get_leaderboard</code>, <code>report_push</code>.</p>
+    </section>
+
+    <p><a href="/dev/leaderboard">← Back to Signet</a></p>
+  </main>
+</body>
+</html>

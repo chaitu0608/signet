@@ -112,6 +112,17 @@ func runAnchorBatcher(ctx context.Context, st store.Store, cli *Client, interval
 					}
 					_ = st.UpdateEvent(ctx, e)
 					slog.Info("EAS attested", "event", e.ID, "uid", e.AttestUID, "tx", attestTx)
+
+					if cli.Reputation != (common.Address{}) {
+						repTx, err := cli.WriteReputation(ctx, e, rootHex)
+						if err != nil {
+							slog.Warn("reputation write failed", "event", e.ID, "err", err)
+						} else {
+							e.ReputationTx = repTx
+							_ = st.UpdateEvent(ctx, e)
+							slog.Info("reputation recorded", "event", e.ID, "tx", repTx)
+						}
+					}
 				}
 			}
 

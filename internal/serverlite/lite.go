@@ -54,6 +54,17 @@ func newMux() http.Handler {
 	mux.HandleFunc("/zendo", func(w http.ResponseWriter, r *http.Request) {
 		serveFile(w, r, staticFS, "zendo.html")
 	})
+	mux.HandleFunc("/paid-api", func(w http.ResponseWriter, r *http.Request) {
+		serveFile(w, r, staticFS, "api.html")
+	})
+	mux.HandleFunc("/v1/docs", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"name":    "Signet Reputation Oracle",
+			"note":    "Full x402 paid API requires Railway/Fly host with X402_PAY_TO set",
+			"docs_ui": "/paid-api",
+		})
+	})
 	mux.Handle("/", http.FileServer(http.FS(staticFS)))
 
 	return mux

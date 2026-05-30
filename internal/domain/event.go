@@ -53,6 +53,7 @@ type Event struct {
 	Category       string   `json:"category,omitempty"`
 	AttestUID      string   `json:"attest_uid,omitempty"`
 	AttestTx       string   `json:"attest_tx,omitempty"`
+	ReputationTx   string   `json:"reputation_tx,omitempty"`
 }
 
 func (e Event) BranchKey() string {

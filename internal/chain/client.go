@@ -30,6 +30,7 @@ type Client struct {
 	EAS            common.Address
 	SchemaRegistry common.Address
 	SchemaUID      common.Hash
+	Reputation     common.Address
 
 	anchorABI abi.ABI
 	bountyABI abi.ABI
@@ -50,6 +51,7 @@ type Config struct {
 	EASAddr           string
 	EASSchemaRegistry string
 	EASSchemaUID      string
+	Reputation        string
 }
 
 // LoadConfig reads chain config from env.
@@ -64,6 +66,7 @@ func LoadConfig() Config {
 		EASAddr:           easAddrFromEnv(),
 		EASSchemaRegistry: schemaRegFromEnv(),
 		EASSchemaUID:      os.Getenv("EAS_SCHEMA_UID"),
+		Reputation:        os.Getenv("REPUTATION_ADDR"),
 	}
 }
 
@@ -116,6 +119,7 @@ func NewClient(ctx context.Context, cfg Config) (*Client, error) {
 		EAS:            common.HexToAddress(cfg.EASAddr),
 		SchemaRegistry: common.HexToAddress(cfg.EASSchemaRegistry),
 		SchemaUID:      schemaUID,
+		Reputation:     common.HexToAddress(cfg.Reputation),
 		anchorABI:      anchorABI,
 		bountyABI:      bountyABI,
 		sbtABI:         sbtABI,

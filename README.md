@@ -22,7 +22,23 @@ After deploying (one-click button above, or `vercel deploy --prod`):
 | `/dev/0xabc0000000000000000000000000000000000001` | Demo profile (seeded data) |
 | `/embed/0xAddress?v=standard` | Embeddable badge iframe |
 
-> **Note:** WebSockets (`/live`) are disabled on Vercel serverless; the UI polls `/api/dev/recent` instead. On-chain workers require a long-running host (Railway, Fly, Docker).
+> **Note:** WebSockets (`/live`) are disabled on Vercel serverless; the UI polls `/api/dev/recent` instead. On-chain workers and the **x402 paid reputation oracle** require a long-running host ([Railway](./railway.toml), Fly, Docker).
+
+## x402 Reputation Oracle (paid API)
+
+Agents and CI systems pay per query in USDC to fetch **EIP-712 signed** proof-of-code reputation reports:
+
+| Endpoint | Default price |
+|----------|---------------|
+| `GET /v1/reputation/{addr}` | $0.01 USDC |
+| `GET /v1/reputation/{addr}/full` | $0.05 USDC |
+| `GET /v1/leaderboard` | $0.02 USDC |
+
+Docs: [`/paid-api`](./static/api.html) · MCP: `go run ./cmd/mcp`
+
+```bash
+X402_PAY_TO=0xYourWallet ORACLE_PRIVATE_KEY=0x... SIGNET_DEV_SEED=1 go run ./cmd/server
+```
 
 ## Quick start (local)
 
