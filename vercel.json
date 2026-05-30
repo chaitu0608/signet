@@ -2,12 +2,18 @@
   "version": 2,
   "build": {
     "env": {
-      "SIGNET_DEV_SEED": "1"
+      "SIGNET_DEV_SEED": "1",
+      "VERCEL": "1"
     }
   },
   "rewrites": [
-    { "source": "/(.*)", "destination": "/api" }
+    { "source": "/(.*)", "destination": "/api/$1" }
   ],
+  "functions": {
+    "api/index.go": {
+      "includeFiles": "static/**"
+    }
+  },
   "headers": [
     {
       "source": "/embed/(.*)",

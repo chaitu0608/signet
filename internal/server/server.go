@@ -118,6 +118,7 @@ func staticDir() string {
 		filepath.Join("..", "static"),
 		"/var/task/static",
 		"/var/task/server/static",
+		filepath.Join(os.Getenv("LAMBDA_TASK_ROOT"), "static"),
 	}
 	for _, p := range candidates {
 		if info, err := os.Stat(p); err == nil && info.IsDir() {
