@@ -4,7 +4,7 @@
 
 Every signed git push is **AI-reviewed**, **Merkle-anchored**, and posted as a **canonical EAS attestation** on Base Sepolia — recipient = your wallet. View your portable reputation at `/dev/0xYou` or embed a live Signet badge anywhere.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fchaitu0608%2Fsignet&project-name=signet&env=SIGNET_DEV_SEED&envDescription=Seed%20demo%20attested%20events%20on%20boot&envValue=1)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fchaitu0608%2Fsignet&project-name=signet-proof-of-code&env=SIGNET_DEV_SEED&envDescription=Seed%20demo%20attested%20events%20on%20boot&envValue=1)
 
 **Repository:** https://github.com/chaitu0608/signet
 
@@ -96,7 +96,9 @@ vercel login
 vercel deploy --prod
 ```
 
-Or import from GitHub: [vercel.com/new/clone → signet](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fchaitu0608%2Fsignet)
+Or import from GitHub: [vercel.com/new/clone → signet-proof-of-code](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fchaitu0608%2Fsignet&project-name=signet-proof-of-code)
+
+> If Vercel says the name is taken, use **`signet-proof-of-code`** (or any unique name like `signet-chaitu0608`) — the product name stays Signet.
 
 ## Verification
 
