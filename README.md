@@ -6,7 +6,10 @@ Every signed git push is **AI-reviewed**, **Merkle-anchored**, and posted as a *
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fchaitu0608%2Fsignet&project-name=signet-proof-of-code&env=SIGNET_DEV_SEED&envDescription=Seed%20demo%20attested%20events%20on%20boot&envValue=1)
 
-**Repository:** https://github.com/chaitu0608/signet
+| Resource | Link |
+|----------|------|
+| **Full technical guide** | **[SIGNET_GUIDE.md](./SIGNET_GUIDE.md)** — architecture, code walkthrough, mermaid diagrams, roadmap |
+| GitHub | https://github.com/chaitu0608/signet |
 
 ## Live demo (Vercel)
 
