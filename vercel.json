@@ -5,7 +5,7 @@
     "env": {
       "SIGNET_DEV_SEED": "1",
       "VERCEL": "1",
-      "GO_VERSION": "1.22"
+      "GO_VERSION": "1.25"
     }
   },
   "rewrites": [
